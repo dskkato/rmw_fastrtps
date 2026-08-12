@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <memory>
 #include <vector>
 
 #include "fastcdr/Cdr.h"
@@ -174,10 +175,14 @@ publish_to_buffer_endpoints(
   for (const auto & endpoint : state.endpoints) {
     uint32_t serialized_size = callbacks->get_serialized_size(ros_message);
     size_t buffer_size = serialized_size + 4;  // +4 for CDR encapsulation header
-    std::vector<uint8_t> buffer_data(buffer_size);
 
+    // Use new[] without an initializer so allocation does not zero-fill the
+    // serialization buffer, while retaining the original per-endpoint
+    // allocation and external FastBuffer lifetime.
+    std::unique_ptr<uint8_t[]> buffer_data(new uint8_t[buffer_size]);
     eprosima::fastcdr::FastBuffer fast_buffer(
-      reinterpret_cast<char *>(buffer_data.data()), buffer_size);
+      reinterpret_cast<char *>(buffer_data.get()), buffer_size);
+
     eprosima::fastcdr::Cdr ser(
       fast_buffer, eprosima::fastcdr::Cdr::DEFAULT_ENDIAN,
       eprosima::fastcdr::CdrVersion::XCDRv1);
