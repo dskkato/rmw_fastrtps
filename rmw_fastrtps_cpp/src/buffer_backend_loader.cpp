@@ -109,6 +109,21 @@ void initialize_buffer_backends(BufferBackendContext & context)
 
     rosidl_typesupport_fastrtps_cpp::BufferDescriptorSerializers desc_ser;
     auto backend_ptr_for_desc = backend;
+    desc_ser.get_serialized_size = [callbacks](
+      const std::shared_ptr<void> & desc_ptr,
+      size_t current_alignment,
+      const rmw_topic_endpoint_info_t & endpoint_info,
+      const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+      {
+        if (!desc_ptr) {
+          throw std::runtime_error("Descriptor pointer is null");
+        }
+        if (!callbacks->get_serialized_size_with_endpoint) {
+          throw std::runtime_error("Descriptor endpoint-aware size callback is not available");
+        }
+        return callbacks->get_serialized_size_with_endpoint(
+          desc_ptr.get(), current_alignment, endpoint_info, serialization_context);
+      };
     desc_ser.serialize = [callbacks](
       eprosima::fastcdr::Cdr & cdr,
       const std::shared_ptr<void> & desc_ptr,
